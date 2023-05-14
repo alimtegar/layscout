@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GridLayout } from 'react-grid-layout-next';
 import type { Layout } from 'react-grid-layout-next';
+import Masonry from 'react-masonry-css';
 
 const API_URL = 'http://localhost:8000'
 const CLASSES = ['button', 'input', 'heading', 'image', 'link', 'text'] as const;
@@ -18,7 +19,7 @@ const App = () => {
 	const [form, setForm] = useState({
 		q: '',
 		limit: 10,
-		iou_threshold: 0.1,
+		precision_level: 10,
 	});
 	const [layout, setLayout] = useState<Layout>([]);
 	const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -58,7 +59,7 @@ const App = () => {
 		e.preventDefault();
 		setIsLoading(true);
 		setResults(null);
-		setTimeout(() => window.scrollTo({top: viewportHeight, behavior: 'smooth'}), 500);
+		setTimeout(() => window.scrollTo({ top: viewportHeight, behavior: 'smooth' }), 500);
 
 
 		try {
@@ -66,7 +67,9 @@ const App = () => {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					...form,
+					q: form.q,
+					limit: form.limit,
+					iou_threshold: form.precision_level / 100,
 					layout_width: LAYOUT_NEW_WIDTH,
 					layout: preprocessLayout(layout, LAYOUT_NEW_WIDTH),
 				})
@@ -127,7 +130,7 @@ const App = () => {
 								</div>
 								<div className="form-control w-full">
 									<label className="label">
-										<span className="label-text text-xs">Max. Results</span>
+										<span className="label-text text-xs">Max. Number of Results</span>
 									</label>
 									<input
 										type="number"
@@ -142,18 +145,22 @@ const App = () => {
 								</div>
 								<div className="form-control w-full">
 									<label className="label">
-										<span className="label-text text-xs">Sensitivity</span>
+										<span className="label-text text-xs">Precision Level</span>
 									</label>
-									<input
-										type="text"
-										min={0}
-										name="iou_threshold"
-										placeholder="0.1"
-										className="input input-bordered"
-										value={form.iou_threshold}
-										onChange={handleInputChange}
-										required
-									/>
+
+									<label className="input-group">
+										<input
+											type="number"
+											min={0}
+											name="precision_level"
+											placeholder="10"
+											className="input input-bordered w-full"
+											value={form.precision_level}
+											onChange={handleInputChange}
+											required
+										/>
+										<span>%</span>
+									</label>
 								</div>
 							</div>
 						</div>
@@ -227,16 +234,20 @@ const App = () => {
 			</pre> */}
 
 			{(results || isLoading) && (
-				<div className="flex h-screen p-4">
+				<div className="flex min-h-screen p-4">
 					{isLoading && (<div className="flex-grow flex justify-center items-center">Loading...</div>)}
 					{results && (
 						results.length ? (
-							<div className="grid grid-cols-4 gap-2">
+							<Masonry
+								breakpointCols={4}
+								className="my-masonry-grid"
+								columnClassName="my-masonry-grid_column"
+							>
 								{results.map(({ image_url, map }, i) => (
 									<div key={i}>
 										<div className="flex flex-col border border-gray-300">
 											<div className="flex justify-between text-xs p-2 border-b border-gray-300">
-												<a href="#" className="link link-primary w-32 truncate">{image_url}</a>
+												<a href={image_url} target="_blank" className="link link-primary w-32 truncate">{image_url}</a>
 												<div className="text-right">
 													Match: <span className="font-semibold">{(map * 100).toFixed(0)}%</span>
 												</div>
@@ -246,7 +257,7 @@ const App = () => {
 										</div>
 									</div>
 								))}
-							</div>
+							</Masonry>
 						) : (<div className="flex-grow flex justify-center items-center">No results found.</div>)
 					)}
 				</div>
