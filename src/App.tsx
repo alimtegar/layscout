@@ -3,15 +3,12 @@ import { GridLayout } from 'react-grid-layout-next';
 import type { Layout } from 'react-grid-layout-next';
 import Masonry from 'react-masonry-css';
 
-const API_URL = 'http://localhost:8000'
+import SearchResult from './components/SearchResult';
+import SearchResultT from './types/SearchResultT';
+
+const API_URL = 'http://localhost:8000';
 const CLASSES = ['button', 'input', 'heading', 'image', 'link', 'text'] as const;
 const LAYOUT_NEW_WIDTH = 640;
-
-type SearchResult = {
-	image_url: string,
-	map: number,
-	boxes: number[][],
-};
 
 const App = () => {
 	const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
@@ -22,7 +19,7 @@ const App = () => {
 		precision_level: 10,
 	});
 	const [layout, setLayout] = useState<Layout>([]);
-	const [results, setResults] = useState<SearchResult[] | null>(null);
+	const [searchResults, setSearchResults] = useState<SearchResultT[] | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
 	const ratio = 4 / 3;
@@ -58,7 +55,7 @@ const App = () => {
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setIsLoading(true);
-		setResults(null);
+		setSearchResults(null);
 		setTimeout(() => window.scrollTo({ top: viewportHeight, behavior: 'smooth' }), 500);
 
 
@@ -83,7 +80,7 @@ const App = () => {
 
 			const responseJson = await response.json()
 			const results = responseJson.results
-			setResults(results)
+			setSearchResults(results)
 		} catch (error: any) {
 			// Handle the error
 			console.error(error.message);
@@ -233,29 +230,21 @@ const App = () => {
 				{JSON.stringify(preprocessLayout(layout, LAYOUT_NEW_WIDTH))}
 			</pre> */}
 
-			{(results || isLoading) && (
+			{(searchResults || isLoading) && (
 				<div className="flex min-h-screen p-4">
 					{isLoading && (<div className="flex-grow flex justify-center items-center">Loading...</div>)}
-					{results && (
-						results.length ? (
+					{searchResults && (
+						searchResults.length ? (
 							<Masonry
 								breakpointCols={4}
 								className="my-masonry-grid"
 								columnClassName="my-masonry-grid_column"
 							>
-								{results.map(({ image_url, map }, i) => (
-									<div key={i}>
-										<div className="flex flex-col border border-gray-300">
-											<div className="flex justify-between text-xs p-2 border-b border-gray-300">
-												<a href={image_url} target="_blank" className="link link-primary w-32 truncate">{image_url}</a>
-												<div className="text-right">
-													Match: <span className="font-semibold">{(map * 100).toFixed(0)}%</span>
-												</div>
-											</div>
-											<img src={image_url} alt="" />
-
-										</div>
-									</div>
+								{searchResults.map((searchResult) => (
+									<SearchResult 
+										{...searchResult} 
+										key={searchResult.image_url} 
+									/>	
 								))}
 							</Masonry>
 						) : (<div className="flex-grow flex justify-center items-center">No results found.</div>)
