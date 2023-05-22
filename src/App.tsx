@@ -1,63 +1,42 @@
-import { useState, useEffect } from 'react';
-import { GridLayout } from 'react-grid-layout-next';
-import type { Layout } from 'react-grid-layout-next';
-import Masonry from 'react-masonry-css';
+import { useState } from 'react';
 
-import SearchResult from './components/SearchResult';
-import SearchResultT from './types/SearchResultT';
+import SearchForm from './components/SearchForm';
+import SearchResults from './components/SearchResults';
+
+import { dataGridI2classId } from './Utils';
+import { VIEWPORT_WIDTH, LAYOUT_HEIGHT, LAYOUT_RATIO, LAYOUT_ROW_HEIGHT, LAYOUT_WIDTH } from './Constants';
+
+import type { FormEvent } from 'react';
+import type { Layout } from 'react-grid-layout-next';
+import type SearchResultT from './types/SearchResultT';
+import type SearchFormT from './types/SearchFormT';
 
 const API_URL = 'http://localhost:8000';
-const CLASSES = ['button', 'input', 'heading', 'image', 'link', 'text'] as const;
-const LAYOUT_NEW_WIDTH = 640;
+const RESIZED_LAYOUT_WIDTH = 640;
 
 const App = () => {
-	const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
-	const [counter, setCounter] = useState(0);
-	const [form, setForm] = useState({
-		q: '',
-		limit: 10,
-		precision_level: 10,
-	});
-	const [layout, setLayout] = useState<Layout>([]);
 	const [searchResults, setSearchResults] = useState<SearchResultT[] | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-
-	const ratio = 4 / 3;
-	const LAYOUT_HEIGHT = viewportHeight - 154;
-	const LAYOUT_WIDTH = LAYOUT_HEIGHT * ratio;
-	const height = LAYOUT_WIDTH / ratio;
-	const rowHeight = 11;
-	const cols = LAYOUT_WIDTH / rowHeight;
-	const initLayoutItemW = 16;
-	const initLayoutItemH = 4;
-
-	const dataGridI2classId = (i: string) => +i.replace(/_\d+$/, '');
+	
 	const preprocessLayout = (layout: Layout, newWidth: number = LAYOUT_WIDTH) => {
-		const newHeight = newWidth / ratio;
+		const newHeight = newWidth / LAYOUT_RATIO;
 		const widthRatio = newWidth / LAYOUT_WIDTH;
-		const heightRatio = newHeight / height;
+		const heightRatio = newHeight / LAYOUT_HEIGHT;
 
 		return layout.map(({ i, x, y, w, h }) => [
-			Math.round(x * rowHeight * widthRatio),			// x1
-			Math.round(y * rowHeight * heightRatio),		// y1
-			Math.round((x + w) * rowHeight * widthRatio),	// x2
-			Math.round((y + h) * rowHeight * heightRatio),	// y2
-			1, 												// confidence, because it's ground truth, the value is 1
-			dataGridI2classId(i),							// class_id
+			Math.round(x * LAYOUT_ROW_HEIGHT * widthRatio),			// x1
+			Math.round(y * LAYOUT_ROW_HEIGHT * heightRatio),		// y1
+			Math.round((x + w) * LAYOUT_ROW_HEIGHT * widthRatio),	// x2
+			Math.round((y + h) * LAYOUT_ROW_HEIGHT * heightRatio),	// y2
+			1, 														// confidence, because it's ground truth, the value is 1
+			dataGridI2classId(i),									// class_id
 		]);
 	};
-	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setForm((prevForm) => ({
-			...prevForm,
-			[e.target.name]: e.target.value,
-		}))
-	};
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSearchFormSubmit = async (e: FormEvent<HTMLFormElement>, form: SearchFormT, layout: Layout) => {
 		e.preventDefault();
 		setIsLoading(true);
 		setSearchResults(null);
-		setTimeout(() => window.scrollTo({ top: viewportHeight, behavior: 'smooth' }), 500);
-
+		setTimeout(() => window.scrollTo({ top: VIEWPORT_WIDTH, behavior: 'smooth' }), 500);
 
 		try {
 			const response = await fetch(`${API_URL}/search`, {
@@ -67,8 +46,8 @@ const App = () => {
 					q: form.q,
 					limit: form.limit,
 					iou_threshold: form.precision_level / 100,
-					layout_width: LAYOUT_NEW_WIDTH,
-					layout: preprocessLayout(layout, LAYOUT_NEW_WIDTH),
+					layout_width: RESIZED_LAYOUT_WIDTH,
+					layout: preprocessLayout(layout, RESIZED_LAYOUT_WIDTH),
 				})
 			});
 
@@ -89,170 +68,19 @@ const App = () => {
 		setIsLoading(false);
 	};
 
-	useEffect(() => {
-		const handleResize = () => {
-			setViewportHeight(window.innerHeight);
-		}
-
-		window.addEventListener('resize', handleResize);
-
-		return () => {
-			window.removeEventListener('resize', handleResize);
-		};
-	}, []);
-
 	return (
 		<div>
-			<form className="grid grid-cols-12 gap-4 p-4" onSubmit={handleSubmit}>
-				<div className="col-span-12 flex bg-gray-300 border border-gray-300">
-					<div className="flex-grow bg-white border-r border-gray-300">
-						<div className="flex items-center h-14 px-4 border-b border-gray-300">
-							<h1 className="font-bold">LayScout</h1>
-						</div>
-						<div className="p-4">
-							<div className="grid grid-cols-1 gap-2 ">
-								<div className="form-control w-full">
-									<label className="label">
-										<span className="label-text text-xs">Search Keywords</span>
-									</label>
-									<input
-										type="text"
-										name="q"
-										placeholder="cool web design"
-										className="input input-bordered"
-										value={form.q}
-										onChange={handleInputChange}
-										required
-									/>
-								</div>
-								<div className="form-control w-full">
-									<label className="label">
-										<span className="label-text text-xs">Max. Number of Results</span>
-									</label>
-									<input
-										type="number"
-										min={0}
-										name="limit"
-										placeholder="10"
-										className="input input-bordered"
-										value={form.limit}
-										onChange={handleInputChange}
-										required
-									/>
-								</div>
-								<div className="form-control w-full">
-									<label className="label">
-										<span className="label-text text-xs">Precision Level</span>
-									</label>
-
-									<label className="input-group">
-										<input
-											type="number"
-											min={0}
-											name="precision_level"
-											placeholder="10"
-											className="input input-bordered w-full"
-											value={form.precision_level}
-											onChange={handleInputChange}
-											required
-										/>
-										<span>%</span>
-									</label>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div>
-						<div className="flex items-center bg-white h-14 px-4 border-b border-gray-300">
-							<div className="-mx-1">
-								{CLASSES.map((label, i) => (
-									<button
-										key={i}
-										className="btn btn-primary btn-xs btn-outline mx-1"
-										type="button"
-										onClick={() => {
-											setLayout((prevLayout) => [
-												...prevLayout,
-												{
-													i: i + '_' + counter,
-													x: 0,
-													y: 0,
-													w: initLayoutItemW,
-													h: initLayoutItemH,
-												},
-											]);
-											setCounter(counter + 1);
-										}}
-									>
-										<span>{label}</span>
-										&nbsp;
-										<span className="-mt-0.5">+</span>
-									</button>
-								))}
-							</div>
-						</div>
-
-						{layout && (
-							<GridLayout
-								allowOverlap
-								cols={cols}
-								rowHeight={rowHeight}
-								width={LAYOUT_WIDTH}
-								margin={[0, 0]}
-								layout={layout}
-								onLayoutChange={(layout) => setLayout(layout)}
-								className="layout"
-								style={{ width: LAYOUT_WIDTH, minHeight: height }}
-							>
-								{layout.map((dataGrid) => (
-									<div
-										key={dataGrid.i}
-										data-grid={dataGrid}
-										className="inline-flex justify-center items-center bg-white bg-opacity-80 border border-gray-300 cursor-pointer select-none"
-									>
-										{CLASSES[dataGridI2classId(dataGrid.i)]}
-									</div>
-								))}
-							</GridLayout>
-						)}
-					</div>
-				</div>
-				<button
-					type="submit"
-					className="col-span-12 btn btn-primary"
-					disabled={!(form.q && layout.length) || isLoading}
-				>
-					{!isLoading ? 'Search' : 'Loading...'}
-				</button>
-			</form>
-
-			{/* <pre>
-				{JSON.stringify(preprocessLayout(layout, LAYOUT_NEW_WIDTH))}
-			</pre> */}
-
-			{(searchResults || isLoading) && (
-				<div className="flex min-h-screen p-4">
-					{isLoading && (<div className="flex-grow flex justify-center items-center">Loading...</div>)}
-					{searchResults && (
-						searchResults.length ? (
-							<Masonry
-								breakpointCols={4}
-								className="my-masonry-grid"
-								columnClassName="my-masonry-grid_column"
-							>
-								{searchResults.map((searchResult) => (
-									<SearchResult 
-										{...searchResult} 
-										key={searchResult.image_url} 
-									/>	
-								))}
-							</Masonry>
-						) : (<div className="flex-grow flex justify-center items-center">No results found.</div>)
-					)}
-				</div>
-			)}
+			<SearchForm 
+				onSubmit={handleSearchFormSubmit}
+				isLoading={isLoading}
+			/>
+			<SearchResults
+				cols={3}
+				searchResults={searchResults}
+				isLoading={isLoading}
+			/>
 		</div>
 	);
 }
 
-export default App
+export default App;

@@ -1,0 +1,1 @@
+export const dataGridI2classId = (i: string) => +i.replace(/_\d+$/, '');

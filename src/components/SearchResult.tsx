@@ -1,26 +1,26 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 
-import SearchResultT from '../types/SearchResultT';
+import { CLASS_COLOR_MAP } from '../Constants';
 
-const SearchResult = ({ image_url, map, boxes }: SearchResultT) => {
-    const [viewportWidth, setViewportWidth] = useState<number>(window.innerWidth);
-    // const [imgContainerSize, setImgContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+import type SearchResultT from '../types/SearchResultT';
+
+const RESIZED_LAYOUT_WIDTH = 640;
+
+const SearchResult = ({ image_url, map, boxes, cols }: SearchResultT & { cols: number }) => {
     const [imgSize, setImgSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-
-    // const imgContainerRef = useRef<HTMLDivElement>(null)
+    // const [classCounts, setClassCounts] = useState<{[key in ClassIdT]: number}>({
+    //     0: 0,
+    //     1: 0,
+    //     2: 0,
+    //     3: 0,
+    //     4: 0,
+    //     5: 0,
+    // });
 
     const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         const { naturalWidth, naturalHeight } = e.currentTarget;
         setImgSize({ width: naturalWidth, height: naturalHeight });
     };
-
-    // useEffect(() => {
-    //     const { current } = imgContainerRef;
-    //     if (current) {
-    //         const { offsetWidth, offsetHeight } = current;
-    //         setImgContainerSize({ width: offsetWidth, height: offsetHeight });
-    //     }
-    // }, []);
 
     return (
         <div>
@@ -30,7 +30,6 @@ const SearchResult = ({ image_url, map, boxes }: SearchResultT) => {
                     <div className="text-right">
                         Match: <span className="font-semibold">{(map * 100).toFixed(0)}%</span>
                     </div>
-                    {/* {JSON.stringify(imgContainerSize)} */}
                 </div>
 
                 <div className="relative">
@@ -42,37 +41,38 @@ const SearchResult = ({ image_url, map, boxes }: SearchResultT) => {
                     <div className="absolute top-0">
                         <div className="relative">
                             {boxes.map((box) => {
-                                const [x1, y1, x2, y2] = box;
+                                const [initX1, initY1, initX2, initY2, _, classId] = box;
 
-                                const BREAKPOINT_COLS = 4
-                                const LAYOUT_NEW_WIDTH = 640
-                                // const cardW = 395
-                                // viewportWidth - (sidePadding * 2) - (innerPadding * (BREAKPOINT_COLS - 1))
-                                const cardW = (viewportWidth - (16 * 2) - (8 * (BREAKPOINT_COLS - 1))) / BREAKPOINT_COLS
-                                console.log(viewportWidth, cardW)
+                                // setClassCounts((prevClassCounts) => ({
+                                //     ...prevClassCounts,
+                                //     [classId]: prevClassCounts[classId]+1,
+                                // }))
 
-                                const wRatio = cardW / LAYOUT_NEW_WIDTH;
-                                const cardH = imgSize.height * cardW / imgSize.width;
-                                const layoutH = LAYOUT_NEW_WIDTH * cardH / cardW;
+                                const vw = window.innerWidth;
+                                // vw - (sidePadding * 2) - (innerPadding * (cols - 1))
+                                const containerW = (vw - (16 * 2) - (8 * (cols - 1))) / cols
+
+                                const wRatio = containerW / RESIZED_LAYOUT_WIDTH;
+                                const cardH = imgSize.height * containerW / imgSize.width;
+                                const layoutH = RESIZED_LAYOUT_WIDTH * cardH / containerW;
                                 const hRatio = cardH / layoutH;
 
-                                const newX1 = x1 * wRatio
-                                const newY1 = y1 * hRatio
-                                const newX2 = x2 * wRatio
-                                const newY2 = y2 * hRatio
+                                const x1 = initX1 * wRatio
+                                const y1 = initY1 * hRatio
+                                const x2 = initX2 * wRatio
+                                const y2 = initY2 * hRatio
 
-                                const w = newX2 - newX1;
-                                const h = newY2 - newY1;
+                                const w = x2 - x1;
+                                const h = y2 - y1;
                                 return (
                                     <div
                                         key={`${x1}-${y1}-${w}-${h}`}
+                                        className={`absolute border border-class-${classId}`}
                                         style={{
-                                            position: 'absolute',
-                                            left: newX1,
-                                            top: newY1,
+                                            left: x1,
+                                            top: y1,
                                             width: w,
                                             height: h,
-                                            border: '1px solid red'
                                         }}
                                     />
                                 )
