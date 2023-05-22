@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { GridLayout } from 'react-grid-layout-next';
 
 import {
-    CLASS_COLOR_MAP,
     CLASS_MAP,
     LAYOUT_COLS,
     LAYOUT_COL_HEIGHT,

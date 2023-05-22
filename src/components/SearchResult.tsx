@@ -1,7 +1,5 @@
 import { useState } from 'react';
 
-import { CLASS_COLOR_MAP } from '../Constants';
-
 import type SearchResultT from '../types/SearchResultT';
 
 const RESIZED_LAYOUT_WIDTH = 640;
